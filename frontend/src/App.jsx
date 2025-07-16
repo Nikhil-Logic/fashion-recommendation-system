@@ -9,6 +9,8 @@ function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const backendUrl = 'https://your-fastapi-deployment-url'; // Change this to your actual deployed FastAPI endpoint
+
   const handleFileChange = (e) => {
     const uploaded = e.target.files[0];
     setFile(uploaded);
@@ -19,23 +21,22 @@ function App() {
   const handleUpload = async () => {
     if (!file) return;
     setLoading(true);
-  
+
     const formData = new FormData();
     formData.append('file', file);
-  
+
     try {
-      const res = await axios.post('http://localhost:8000/recommend', formData, {
+      const res = await axios.post(`${backendUrl}/recommend`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-  
-      // ✅ Define and log the URLs properly here
+
       const fixedUrls = res.data.recommendations.map(path =>
-        `http://localhost:8000/${path.replace(/\\/g, '/').replace(/^\/+/, '')}`
+        path.startsWith("http") ? path : `${path}` // direct HF URLs
       );
       console.log("Recommended URLs:", fixedUrls);
-  
+
       setRecommendations(fixedUrls);
     } catch (err) {
       console.error(err);
@@ -43,7 +44,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };  
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-indigo-100 to-white flex flex-col items-center p-6">

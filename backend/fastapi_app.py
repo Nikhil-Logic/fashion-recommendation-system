@@ -5,23 +5,32 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 import numpy as np
-import tensorflow
+import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
 from tensorflow.keras.layers import GlobalMaxPooling2D
 from numpy.linalg import norm
 from sklearn.neighbors import NearestNeighbors
 from PIL import Image
-import pickle
 import uuid
+import requests
+import pickle
 
-# Load precomputed features and filenames
-feature_list = np.array(pickle.load(open('embeddings.pkl', 'rb')))
-filenames = pickle.load(open('filenames.pkl', 'rb'))
+# Load embeddings.pkl and filenames.pkl from Hugging Face via HTTP
+EMBEDDING_URL = "https://huggingface.co/datasets/TheNikhil/fashion-product-dataset/resolve/main/embeddings.pkl"
+FILENAMES_URL = "https://huggingface.co/datasets/TheNikhil/fashion-product-dataset/resolve/main/filenames.pkl"
+
+# Fetch the files
+embedding_response = requests.get(EMBEDDING_URL)
+filename_response = requests.get(FILENAMES_URL)
+
+# Deserialize
+feature_list = np.array(pickle.loads(embedding_response.content))
+filenames = pickle.loads(filename_response.content)
 
 # Load ResNet50 model
 base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-model = tensorflow.keras.Sequential([
+model = tf.keras.Sequential([
     base_model,
     GlobalMaxPooling2D()
 ])
@@ -33,7 +42,7 @@ app = FastAPI()
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, use only specific frontend URLs
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,11 +50,9 @@ app.add_middleware(
 
 # Directory setup
 UPLOAD_DIR = "uploads"
-IMAGE_DIR = "images"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Serve static files from images directory (for recommended image URLs)
-from fastapi.staticfiles import StaticFiles
+# Static mount for image files
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 
@@ -63,7 +70,7 @@ def recommend(features, feature_list):
     neighbors = NearestNeighbors(n_neighbors=6, algorithm='brute', metric='euclidean')
     neighbors.fit(feature_list)
     distances, indices = neighbors.kneighbors([features])
-    return indices[0][1:]  # Skip the uploaded image itself
+    return indices[0][1:]  # skip self match
 
 
 @app.post("/recommend")
@@ -73,15 +80,12 @@ async def recommend_fashion(file: UploadFile = File(...)):
         filename = f"{uuid.uuid4().hex}{file_ext}"
         file_path = os.path.join(UPLOAD_DIR, filename)
 
-        # Save uploaded file
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
 
-        # Extract features and get recommendations
         features = feature_extraction(file_path, model)
         indices = recommend(features, feature_list)
 
-        # Return image paths as public URLs
         recommended_images = [f"/images/{os.path.basename(filenames[i])}" for i in indices]
 
         return JSONResponse(content={"recommendations": recommended_images})
@@ -89,6 +93,6 @@ async def recommend_fashion(file: UploadFile = File(...)):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
-# Run app: uvicorn fastapi_app:app --reload
+# Run app: uvicorn fashion_app:app --reload
 if __name__ == "__main__":
-    uvicorn.run("fastapi_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("fashion_app:app", host="0.0.0.0", port=8000, reload=True)
