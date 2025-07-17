@@ -9,7 +9,7 @@ function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const backendUrl = 'https://fashion-recommendation-system-ibub.onrender.com'; // Your deployed FastAPI backend
+  const backendUrl = 'https://fashion-recommendation-system-udx9.onrender.com'; // Your deployed FastAPI backend
   const HUGGINGFACE_IMAGE_BASE_URL = "https://huggingface.co/datasets/TheNikhil/fashion-product-dataset/resolve/main/";
 
   const handleFileChange = (e) => {
