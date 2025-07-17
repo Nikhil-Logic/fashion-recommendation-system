@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: fashion-app
-    env: docker
-    plan: free
-    repo: https://github.com/Nikhil-Logic/fashion-recommendation-system
-    branch: main
-    rootDir: ./
-    dockerfilePath: Dockerfile
+    name: fashion-recommendation-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10
