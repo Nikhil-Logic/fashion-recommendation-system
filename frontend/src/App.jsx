@@ -9,7 +9,8 @@ function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const backendUrl = 'https://your-fastapi-deployment-url'; // Change this to your actual deployed FastAPI endpoint
+  const backendUrl = 'https://fashion-recommendation-system-ibub.onrender.com'; // Your deployed FastAPI backend
+  const HUGGINGFACE_IMAGE_BASE_URL = "https://huggingface.co/datasets/TheNikhil/fashion-product-dataset/resolve/main/";
 
   const handleFileChange = (e) => {
     const uploaded = e.target.files[0];
@@ -32,11 +33,12 @@ function App() {
         }
       });
 
+      // Fix relative paths by prefixing Hugging Face base URL
       const fixedUrls = res.data.recommendations.map(path =>
-        path.startsWith("http") ? path : `${path}` // direct HF URLs
+        path.startsWith("http") ? path : `${HUGGINGFACE_IMAGE_BASE_URL}${path}`
       );
-      console.log("Recommended URLs:", fixedUrls);
 
+      console.log("Recommended URLs:", fixedUrls);
       setRecommendations(fixedUrls);
     } catch (err) {
       console.error(err);
